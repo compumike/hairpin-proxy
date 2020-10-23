@@ -64,7 +64,7 @@ The `dig` should show the external load balancer IP address. The `curl` should f
 ### Step 1: Install hairpin-proxy in your Kubernetes cluster
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/compumike/hairpin-proxy/master/deploy.yml
+kubectl apply -f https://raw.githubusercontent.com/compumike/hairpin-proxy/v0.1.0/deploy.yml
 ```
 
 If you're using [ingress-nginx](https://kubernetes.github.io/ingress-nginx/) and optionally [cert-manager](https://github.com/jetstack/cert-manager), it will work out of the box.
