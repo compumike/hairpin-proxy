@@ -4,6 +4,14 @@ PROXY protocol support for internal-to-LoadBalancer traffic for Kubernetes Ingre
 
 If you've had problems with ingress-nginx, cert-manager, LetsEncrypt ACME HTTP01 self-check failures, and the PROXY protocol, read on.
 
+## One-line install
+
+```shell
+kubectl apply -f https://raw.githubusercontent.com/compumike/hairpin-proxy/v0.1.0/deploy.yml
+```
+
+If you're using [ingress-nginx](https://kubernetes.github.io/ingress-nginx/) and [cert-manager](https://github.com/jetstack/cert-manager), it will work out of the box. See detailed installation and testing instructions below.
+
 ## The PROXY Protocol
 
 If you run a service behind a load balancer, your downstream server will see all connections as originating from the load balancer's IP address. The user's source IP address will be lost and will not be visible to your server. To solve this, the [PROXY protocol](http://www.haproxy.org/download/1.8/doc/proxy-protocol.txt) preserves source addresses on proxied TCP connections by having the load balancer prepend a simple string such as "PROXY TCP4 255.255.255.255 255.255.255.255 65535 65535\r\n" at the beginning of the downstream TCP connection.
@@ -43,7 +51,7 @@ None of these are particularly easy without modifying upstream packages, and the
 
 As a result, when pod in your cluster (such as cert-manager) try to access http://your-site/, they resolve to the hairpin-proxy, which adds the PROXY line and sends it to your `ingress-nginx`. The NGINX parses the PROXY protocol just as it would if it had come from an external load balancer, so it sees a valid request and handles it identically to external requests.
 
-## Quick Start Deployment
+## Installation and Testing
 
 ### Step 0: Confirm that HTTP does NOT work from containers in your cluster
 
@@ -59,7 +67,7 @@ curl http://subdomain.example.com/
 curl http://subdomain.example.com/ --haproxy-protocol
 ```
 
-The `dig` should show the external load balancer IP address. The `curl` should fail with `Empty reply from server` because NGINX expects the PROXY protocol. However, the second `curl` with `--haproxy-protocol` should succeed, indicating that despite the external-appearing IP address, the traffic is being rewritten by Kubernetes to bypass the external load balancer.
+The `dig` should show the external load balancer IP address. The first `curl` should fail with `Empty reply from server` because NGINX expects the PROXY protocol. However, the second `curl` with `--haproxy-protocol` should succeed, indicating that despite the external-appearing IP address, the traffic is being rewritten by Kubernetes to bypass the external load balancer.
 
 ### Step 1: Install hairpin-proxy in your Kubernetes cluster
 
@@ -67,7 +75,18 @@ The `dig` should show the external load balancer IP address. The `curl` should f
 kubectl apply -f https://raw.githubusercontent.com/compumike/hairpin-proxy/v0.1.0/deploy.yml
 ```
 
-If you're using [ingress-nginx](https://kubernetes.github.io/ingress-nginx/) and optionally [cert-manager](https://github.com/jetstack/cert-manager), it will work out of the box.
+If you're using `ingress-nginx`, this will work as-is.
+
+If you using an ingress controller other than `ingress-nginx`, you must change the `TARGET_SERVER` environment variable passed to the `hairpin-proxy-haproxy` container. It defaults to `ingress-nginx-controller.ingress-nginx.svc.cluster.local`, which specifies the `ingress-nginx-controller` Service within the `ingress-nginx` namespace. You can change this by editing the `hairpin-proxy-haproxy` Deployment and specifiying an environment variable:
+
+```shell
+kubectl edit -n hairpin-proxy deployment hairpin-proxy-haproxy
+
+# Within spec.template.spec.containers[0], add something like:
+env:
+  name: TARGET_SERVER
+  value: my-ingress-controller.my-ingress-controller-namespace.svc.cluster.local
+```
 
 ### Step 2: Confirm that your CoreDNS configuration was updated
 
@@ -86,7 +105,9 @@ Note that the comment `# Added by hairpin-proxy` is used to prevent hairpin-prox
 ### Step 3: Confirm that your DNS has propagated and that HTTP now works from containers in your cluster
 
 ```shell
-k run my-test-container --image=alpine -it --rm -- /bin/sh
+kubectl run my-test-container --image=alpine -it --rm -- /bin/sh
+
+# In the container shell:
 apk add bind-tools curl
 dig subdomain.example.com
 dig hairpin-proxy.hairpin-proxy.svc.cluster.local
