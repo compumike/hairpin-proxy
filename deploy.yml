@@ -23,8 +23,7 @@ spec:
         app: hairpin-proxy-haproxy
     spec:
       containers:
-        - image: compumike/hairpin-proxy-haproxy:latest
-          imagePullPolicy: Always
+        - image: compumike/hairpin-proxy-haproxy:0.1
           name: main
 
 ---
@@ -146,6 +145,5 @@ spec:
         runAsUser: 405
         runAsGroup: 65533
       containers:
-        - image: compumike/hairpin-proxy-controller:latest
-          imagePullPolicy: Always
+        - image: compumike/hairpin-proxy-controller:0.1
           name: main
