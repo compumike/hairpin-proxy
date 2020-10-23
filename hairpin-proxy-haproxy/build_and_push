@@ -1,0 +1,4 @@
+#!/bin/sh
+set -e
+docker build -t compumike/hairpin-proxy-haproxy .
+docker push compumike/hairpin-proxy-haproxy
