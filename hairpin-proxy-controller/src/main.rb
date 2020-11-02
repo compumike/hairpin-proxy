@@ -6,7 +6,11 @@ STDOUT.sync = true
 require "k8s-client"
 
 def ingress_hosts(k8s)
-  k8s.api("extensions/v1beta1").resource("ingresses").list.map { |r| r.spec.tls }.flatten.map(&:hosts).flatten.sort.uniq
+  all_ingresses = k8s.api("extensions/v1beta1").resource("ingresses").list
+
+  all_tls_blocks = all_ingresses.map { |r| r.spec.tls }.flatten.compact
+
+  all_tls_blocks.map(&:hosts).flatten.compact.sort.uniq
 end
 
 def rewrite_coredns_corefile(cf, hosts)
