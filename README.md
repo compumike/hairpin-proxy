@@ -7,7 +7,7 @@ If you've had problems with ingress-nginx, cert-manager, LetsEncrypt ACME HTTP01
 ## One-line install
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/compumike/hairpin-proxy/v0.1.1/deploy.yml
+kubectl apply -f https://raw.githubusercontent.com/compumike/hairpin-proxy/v0.1.2/deploy.yml
 ```
 
 If you're using [ingress-nginx](https://kubernetes.github.io/ingress-nginx/) and [cert-manager](https://github.com/jetstack/cert-manager), it will work out of the box. See detailed installation and testing instructions below.
@@ -46,10 +46,10 @@ None of these are particularly easy without modifying upstream packages, and the
 
 ## The hairpin-proxy Solution
 
-1. hairpin-proxy intercepts and modifies cluster-internal DNS lookups for hostnames that are served by your ingress controller, pointing them to the IP of an internal `hairpin-proxy-haproxy` service instead. (This is managed by `hairpin-proxy-controller`, which simply watches the Kubernetes API for new/modified Ingress resources, examines their `spec.tls.hosts`, and updates the CoreDNS ConfigMap when necessary.)
+1. hairpin-proxy intercepts and modifies cluster-internal DNS lookups for hostnames that are served by your ingress controller, pointing them to the IP of an internal `hairpin-proxy-haproxy` service instead. (This DNS redirection is managed by `hairpin-proxy-controller`, which simply polls the Kubernetes API for new/modified Ingress resources, examines their `spec.tls.hosts`, and updates the CoreDNS ConfigMap when necessary.)
 2. The internal `hairpin-proxy-haproxy` service runs a minimal HAProxy instance which is configured to append the PROXY line and forward the traffic on to the internal ingress controller.
 
-As a result, when pod in your cluster (such as cert-manager) try to access http://your-site/, they resolve to the hairpin-proxy, which adds the PROXY line and sends it to your `ingress-nginx`. The NGINX parses the PROXY protocol just as it would if it had come from an external load balancer, so it sees a valid request and handles it identically to external requests.
+As a result, when pods in your cluster (such as cert-manager) try to access http://your-site/, they resolve to the hairpin-proxy, which adds the PROXY line and sends it to your `ingress-nginx`. The NGINX parses the PROXY protocol just as it would if it had come from an external load balancer, so it sees a valid request and handles it identically to external requests.
 
 ## Installation and Testing
 
@@ -60,7 +60,7 @@ Let's suppose that `http://subdomain.example.com/` is served from your cluster, 
 Get a shell within your cluster and try to access the site to confirm that it isn't working:
 
 ```shell
-k run my-test-container --image=alpine -it --rm -- /bin/sh
+kubectl run my-test-container --image=alpine -it --rm -- /bin/sh
 apk add bind-tools curl
 dig subdomain.example.com
 curl http://subdomain.example.com/
@@ -72,12 +72,12 @@ The `dig` should show the external load balancer IP address. The first `curl` sh
 ### Step 1: Install hairpin-proxy in your Kubernetes cluster
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/compumike/hairpin-proxy/v0.1.0/deploy.yml
+kubectl apply -f https://raw.githubusercontent.com/compumike/hairpin-proxy/v0.1.2/deploy.yml
 ```
 
 If you're using `ingress-nginx`, this will work as-is.
 
-If you using an ingress controller other than `ingress-nginx`, you must change the `TARGET_SERVER` environment variable passed to the `hairpin-proxy-haproxy` container. It defaults to `ingress-nginx-controller.ingress-nginx.svc.cluster.local`, which specifies the `ingress-nginx-controller` Service within the `ingress-nginx` namespace. You can change this by editing the `hairpin-proxy-haproxy` Deployment and specifiying an environment variable:
+However, if you using an ingress controller other than `ingress-nginx`, you must change the `TARGET_SERVER` environment variable passed to the `hairpin-proxy-haproxy` container. It defaults to `ingress-nginx-controller.ingress-nginx.svc.cluster.local`, which specifies the `ingress-nginx-controller` Service within the `ingress-nginx` namespace. You can change this by editing the `hairpin-proxy-haproxy` Deployment and specifiying an environment variable:
 
 ```shell
 kubectl edit -n hairpin-proxy deployment hairpin-proxy-haproxy

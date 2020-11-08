@@ -23,8 +23,15 @@ spec:
         app: hairpin-proxy-haproxy
     spec:
       containers:
-        - image: compumike/hairpin-proxy-haproxy:0.1.1
+        - image: compumike/hairpin-proxy-haproxy:0.1.2
           name: main
+          resources:
+            requests:
+              memory: "100Mi"
+              cpu: "10m"
+            limits:
+              memory: "200Mi"
+              cpu: "50m"
 
 ---
 
@@ -144,5 +151,12 @@ spec:
         runAsUser: 405
         runAsGroup: 65533
       containers:
-        - image: compumike/hairpin-proxy-controller:0.1.1
+        - image: compumike/hairpin-proxy-controller:0.1.2
           name: main
+          resources:
+            requests:
+              memory: "50Mi"
+              cpu: "10m"
+            limits:
+              memory: "100Mi"
+              cpu: "50m"
