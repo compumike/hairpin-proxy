@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-require "k8s-client"
+require "k8s-ruby"
 require "logger"
 
 class HairpinProxyController
