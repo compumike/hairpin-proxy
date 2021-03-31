@@ -84,8 +84,8 @@ kubectl edit -n hairpin-proxy deployment hairpin-proxy-haproxy
 
 # Within spec.template.spec.containers[0], add something like:
 env:
-  name: TARGET_SERVER
-  value: my-ingress-controller.my-ingress-controller-namespace.svc.cluster.local
+  - name: TARGET_SERVER
+    value: my-ingress-controller.my-ingress-controller-namespace.svc.cluster.local
 ```
 
 ### Step 2: Confirm that your CoreDNS configuration was updated
