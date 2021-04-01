@@ -16,7 +16,7 @@ spec:
     spec:
       serviceAccountName: hairpin-proxy-controller-sa
       containers:
-        - image: compumike/hairpin-proxy-controller:0.2.0
+        - image: compumike/hairpin-proxy-controller:0.2.1
           name: main
           command: ["/app/src/main.rb", "--etc-hosts", "/app/etchosts"]
           volumeMounts:
