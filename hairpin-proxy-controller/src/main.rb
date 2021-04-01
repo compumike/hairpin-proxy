@@ -53,21 +53,25 @@ class HairpinProxyController
     cflines.join("\n")
   end
 
+  def check_and_rewrite_coredns
+    @log.info("Polling all Ingress resources and CoreDNS configuration...")
+    hosts = fetch_ingress_hosts
+    cm = @k8s.api.resource("configmaps", namespace: "kube-system").get("coredns")
+
+    old_corefile = cm.data.Corefile
+    new_corefile = coredns_corefile_with_rewrite_rules(old_corefile, hosts)
+
+    if old_corefile.strip != new_corefile.strip
+      @log.info("Corefile has changed! New contents:\n#{new_corefile}\nSending updated ConfigMap to Kubernetes API server...")
+      cm.data.Corefile = new_corefile
+      @k8s.api.resource("configmaps", namespace: "kube-system").update_resource(cm)
+    end
+  end
+
   def main_loop
     @log.info("Starting main_loop with #{POLL_INTERVAL}s polling interval.")
     loop do
-      @log.info("Polling all Ingress resources and CoreDNS configuration...")
-      hosts = fetch_ingress_hosts
-      cm = @k8s.api.resource("configmaps", namespace: "kube-system").get("coredns")
-
-      old_corefile = cm.data.Corefile
-      new_corefile = coredns_corefile_with_rewrite_rules(old_corefile, hosts)
-
-      if old_corefile.strip != new_corefile.strip
-        @log.info("Corefile has changed! New contents:\n#{new_corefile}\nSending updated ConfigMap to Kubernetes API server...")
-        cm.data.Corefile = new_corefile
-        @k8s.api.resource("configmaps", namespace: "kube-system").update_resource(cm)
-      end
+      check_and_rewrite_coredns
 
       sleep(POLL_INTERVAL)
     end
