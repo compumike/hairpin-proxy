@@ -5,9 +5,14 @@ require "k8s-ruby"
 require "logger"
 
 class HairpinProxyController
-  COREDNS_CONFIGMAP_LINE_SUFFIX = "# Added by hairpin-proxy"
+  COMMENT_LINE_SUFFIX = "# Added by hairpin-proxy"
   DNS_REWRITE_DESTINATION = "hairpin-proxy.hairpin-proxy.svc.cluster.local"
   POLL_INTERVAL = ENV.fetch("POLL_INTERVAL", "15").to_i.clamp(1..)
+
+  # Kubernetes <= 1.18 puts Ingress in "extensions/v1beta1"
+  # Kubernetes >= 1.19 puts Ingress in "networking.k8s.io/v1"
+  # (We search both for maximum compatibility.)
+  INGRESS_API_VERSIONS = ["extensions/v1beta1", "networking.k8s.io/v1"].freeze
 
   def initialize
     @k8s = K8s::Client.in_cluster_config
@@ -18,20 +23,27 @@ class HairpinProxyController
 
   def fetch_ingress_hosts
     # Return a sorted Array of all unique hostnames mentioned in Ingress spec.tls.hosts blocks, in all namespaces.
-    all_ingresses = @k8s.api("extensions/v1beta1").resource("ingresses").list
+    all_ingresses = INGRESS_API_VERSIONS.map { |api_version|
+      begin
+        @k8s.api(api_version).resource("ingresses").list
+      rescue K8s::Error::NotFound
+        @log.warn("Warning: Unable to list ingresses in #{api_version}")
+        []
+      end
+    }.flatten
     all_tls_blocks = all_ingresses.map { |r| r.spec.tls }.flatten.compact
     all_tls_blocks.map(&:hosts).flatten.compact.sort.uniq
   end
 
   def coredns_corefile_with_rewrite_rules(original_corefile, hosts)
     # Return a String representing the original CoreDNS Corefile, modified to include rewrite rules for each of *hosts.
-    # This is an idempotent transformation because our rewrites are labeled with COREDNS_CONFIGMAP_LINE_SUFFIX.
+    # This is an idempotent transformation because our rewrites are labeled with COMMENT_LINE_SUFFIX.
 
     # Extract base configuration, without our hairpin-proxy rewrites
-    cflines = original_corefile.strip.split("\n").reject { |line| line.strip.end_with?(COREDNS_CONFIGMAP_LINE_SUFFIX) }
+    cflines = original_corefile.strip.split("\n").reject { |line| line.strip.end_with?(COMMENT_LINE_SUFFIX) }
 
     # Create rewrite rules
-    rewrite_lines = hosts.map { |host| "    rewrite name #{host} #{DNS_REWRITE_DESTINATION} #{COREDNS_CONFIGMAP_LINE_SUFFIX}" }
+    rewrite_lines = hosts.map { |host| "    rewrite name #{host} #{DNS_REWRITE_DESTINATION} #{COMMENT_LINE_SUFFIX}" }
 
     # Inject at the start of the main ".:53 { ... }" configuration block
     main_server_line = cflines.index { |line| line.strip.start_with?(".:53 {") }
