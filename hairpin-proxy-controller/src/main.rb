@@ -28,7 +28,7 @@ class HairpinProxyController
     all_ingresses = INGRESS_API_VERSIONS.map { |api_version|
       begin
         @k8s.api(api_version).resource("ingresses").list
-      rescue K8s::Error::NotFound
+      rescue K8s::Error::NotFound, K8s::Error::UndefinedResource
         @log.warn("Warning: Unable to list ingresses in #{api_version}")
         []
       end
