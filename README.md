@@ -7,7 +7,7 @@ If you've had problems with ingress-nginx, cert-manager, LetsEncrypt ACME HTTP01
 ## One-line install
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/compumike/hairpin-proxy/v0.1.2/deploy.yml
+kubectl apply -f https://raw.githubusercontent.com/compumike/hairpin-proxy/v0.2.0/deploy.yml
 ```
 
 If you're using [ingress-nginx](https://kubernetes.github.io/ingress-nginx/) and [cert-manager](https://github.com/jetstack/cert-manager), it will work out of the box. See detailed installation and testing instructions below.
@@ -72,7 +72,7 @@ The `dig` should show the external load balancer IP address. The first `curl` sh
 ### Step 1: Install hairpin-proxy in your Kubernetes cluster
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/compumike/hairpin-proxy/v0.1.2/deploy.yml
+kubectl apply -f https://raw.githubusercontent.com/compumike/hairpin-proxy/v0.2.0/deploy.yml
 ```
 
 If you're using `ingress-nginx`, this will work as-is.
@@ -119,3 +119,15 @@ This time, the first `dig` should show an internal service IP address (generally
 NOTE: CoreDNS is a cache, so even if you see the `rewrite` rules in Step 2, it will take another minute or two before the queries resolve correctly. Be patient. You may wish to `watch -n 1 dig subdomain.example.com` to see when this changeover happens.
 
 At this point, cert-manager's self-check will pass, and you'll get valid LetsEncrypt certificates within a few minutes.
+
+### Step 4: (Optional) Install hairpin-proxy-etchosts-controller DaemonSet
+
+Note that the CoreDNS rewrites above only cover access within containers, while the iptables rewrite applies to the Node itself. This mismatch causes a problem if your node itself needs to access something behind your ingress. An example is if you're hosting your own container registry with [trow](https://github.com/ContainerSolutions/trow) and it's behind the ingress. If you follow only steps 1-3 above, you'll experience image pull failures because the Docker daemon (running on the Node directly, not in a container) can't access your registry.
+
+To resolve this, we need to rewrite the DNS on the Node itself. The Node does not use CoreDNS, so we can instead rewrite `/etc/hosts` to point to the IP address of the `hairpin-proxy-haproxy` service. This runs as a DaemonSet, so that it can modify each Node's copy of `/etc/hosts`.
+
+To install this DaemonSet:
+
+```shell
+kubectl apply -f https://raw.githubusercontent.com/compumike/hairpin-proxy/v0.2.0/deploy-etchosts-daemonset.yml
+```

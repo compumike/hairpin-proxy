@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: hairpin-proxy-etchosts-controller
+  name: hairpin-proxy-etchosts-controller
+  namespace: hairpin-proxy
+spec:
+  selector:
+    matchLabels:
+      app: hairpin-proxy-etchosts-controller
+  template:
+    metadata:
+      labels:
+        app: hairpin-proxy-etchosts-controller
+    spec:
+      serviceAccountName: hairpin-proxy-controller-sa
+      containers:
+        - image: compumike/hairpin-proxy-controller:0.2.0
+          name: main
+          command: ["/app/src/main.rb", "--etc-hosts", "/app/etchosts"]
+          volumeMounts:
+            - name: etchosts
+              mountPath: /app/etchosts
+          resources:
+            requests:
+              memory: "50Mi"
+              cpu: "10m"
+            limits:
+              memory: "100Mi"
+              cpu: "50m"
+      volumes:
+        - name: etchosts
+          hostPath:
+            path: /etc/hosts
+            type: File
