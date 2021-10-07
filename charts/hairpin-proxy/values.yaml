@@ -1,0 +1,67 @@
+haproxy:
+  replicaCount: 1
+  image:
+    repository: compumike/hairpin-proxy-haproxy
+    pullPolicy: Always
+    tag: "0.2.1"
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  podSecurityContext: {}
+  securityContext:
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 101
+  readinessProbe:
+    tcpSocket:
+      port: http
+  service:
+    type: ClusterIP
+    port: 80
+  targetServer: "ingress-nginx-controller.ingress-nginx.svc.cluster.local"
+
+controller:
+  replicaCount: 1
+  image:
+    repository: compumike/hairpin-proxy-controller
+    pullPolicy: Always
+    tag: "0.2.1"
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  podSecurityContext: {}
+  securityContext:
+    capabilities:
+      drop:
+      - ALL
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 9000
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podSecurityPolicy:
+  enabled: false
+
+podAnnotations: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

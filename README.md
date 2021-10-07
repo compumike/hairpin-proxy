@@ -131,3 +131,13 @@ To install this DaemonSet:
 ```shell
 kubectl apply -f https://raw.githubusercontent.com/compumike/hairpin-proxy/v0.2.1/deploy-etchosts-daemonset.yml
 ```
+
+### Alternatively install via helm chart
+
+The helm chart installs both the controller and haproxy at one go.
+
+The chart creates a configMap for `haproxy.cfg` and mount it at `/usr/local/etc/haproxy/haproxy.cfg`. You might want to update the value of `haproxy.targetServer` to point to the correct ingress controller endpoint for your deployment.
+
+```shell
+helm --namespace hairpin-proxy install --create-namespace hairpin-proxy charts/hairpin-proxy
+```

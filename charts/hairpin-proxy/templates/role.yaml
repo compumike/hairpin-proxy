@@ -1,0 +1,19 @@
+{{- if .Values.serviceAccount.create -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "hairpin-proxy.fullname" . }}
+  namespace: kube-system
+  labels:
+    {{- include "hairpin-proxy.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources:
+      - configmaps
+    resourceNames:
+      - coredns
+    verbs:
+      - get
+      - watch
+      - update
+{{- end }}

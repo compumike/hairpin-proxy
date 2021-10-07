@@ -1,0 +1,14 @@
+{{- if .Values.podSecurityPolicy.enabled }}
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ template "hairpin-proxy.fullname" . }}-psp
+  labels:
+{{- include "hairpin-proxy.labels" . | nindent 4 }}
+rules:
+- apiGroups: ['policy']
+  resources: ['podsecuritypolicies']
+  verbs:     ['use']
+  resourceNames:
+  - {{ template "hairpin-proxy.fullname" . }}
+{{- end }}

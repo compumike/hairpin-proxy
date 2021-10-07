@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "hairpin-proxy.fullname" . }}-haproxy
+  labels:
+    app.kubernetes.io/component: haproxy
+    {{- include "hairpin-proxy.labels" . | nindent 4 }}
+  annotations:
+    kube-score/ignore: deployment-has-poddisruptionbudget, deployment-has-host-podantiaffinity, pod-probes, container-security-context-user-group-id, pod-networkpolicy
+spec:
+  replicas: {{ .Values.haproxy.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "hairpin-proxy.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        app.kubernetes.io/component: haproxy
+        {{- include "hairpin-proxy.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "hairpin-proxy.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.haproxy.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}-haproxy
+          securityContext:
+            {{- toYaml .Values.haproxy.securityContext | nindent 12 }}
+          image: "{{ .Values.haproxy.image.repository }}:{{ .Values.haproxy.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.haproxy.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: https
+              containerPort: 8443
+              protocol: TCP
+          env:
+            - name: TARGET_SERVER
+              value: {{ .Values.haproxy.targetServer }}
+          volumeMounts:
+            - name: haproxycfg
+              mountPath: /usr/local/etc/haproxy
+          readinessProbe:
+            {{- toYaml .Values.haproxy.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.haproxy.resources | nindent 12 }}
+      volumes:
+        - name: haproxycfg
+          configMap:
+            name: {{ include "hairpin-proxy.fullname" . }}
+            items:
+            - key: "haproxy.cfg"
+              path: "haproxy.cfg"
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
