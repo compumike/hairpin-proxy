@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "hairpin-proxy.fullname" . }}
+  labels:
+    app.kubernetes.io/component: haproxy
+    {{- include "hairpin-proxy.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.haproxy.service.type }}
+  ports:
+    - port: 80
+      targetPort: http
+      protocol: TCP
+      name: http
+    - port: 443
+      targetPort: https
+      protocol: TCP
+      name: https
+  selector:
+    app.kubernetes.io/component: haproxy
+    {{- include "hairpin-proxy.selectorLabels" . | nindent 4 }}

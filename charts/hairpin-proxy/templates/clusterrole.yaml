@@ -1,0 +1,19 @@
+{{- if .Values.serviceAccount.create -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "hairpin-proxy.fullname" . }}
+  labels:
+    {{- include "hairpin-proxy.labels" . | nindent 4 }}
+rules:
+  - apiGroups:
+      - extensions
+      - networking.k8s.io
+    resources:
+      - ingresses
+    verbs:
+      - get
+      - list
+      - watch
+{{- end }}
+
