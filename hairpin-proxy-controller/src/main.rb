@@ -10,6 +10,7 @@ class HairpinProxyController
   COMMENT_LINE_SUFFIX = "# Added by hairpin-proxy"
   DNS_REWRITE_DESTINATION = "hairpin-proxy.hairpin-proxy.svc.cluster.local"
   POLL_INTERVAL = ENV.fetch("POLL_INTERVAL", "15").to_i.clamp(1..)
+  INGRESS_CLASS = ENV.fetch("INGRESS_CLASS", nil)
 
   # Kubernetes <= 1.18 puts Ingress in "extensions/v1beta1"
   # Kubernetes >= 1.19 puts Ingress in "networking.k8s.io/v1"
@@ -33,6 +34,10 @@ class HairpinProxyController
         []
       end
     }.flatten
+    # Filtrar los Ingress por la anotación "kubernetes.io/ingress.class" si INGRESS_CLASS está definida
+    if INGRESS_CLASS
+      all_ingresses.filter! { |ingress| ingress.metadata.annotations&.[]("kubernetes.io/ingress.class") == INGRESS_CLASS }
+    end
     all_tls_blocks = all_ingresses.map { |r| r.spec.tls }.flatten.compact
     hosts = all_tls_blocks.map(&:hosts).flatten.compact
     hosts.filter! { |host| /\A[A-Za-z0-9.\-_]+\z/.match?(host) }
