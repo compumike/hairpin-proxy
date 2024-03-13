@@ -24,18 +24,27 @@ class HairpinProxyController
     @log = Logger.new(STDOUT)
   end
 
-  def set_coredns_configmap_var
+  def set_coredns_env_var
 
     # This function looks up for coredns configmap name from env.
     # If not present, it uses default name coredns
     # Returning CoreDNS CM Variable
-    if ENV.key?('COREDNS_CONFIGMAP_NAME')
-      COREDNS_CM = ENV['COREDNS_CONFIGMAP_NAME']
+    if ENV.key?('COREDNS_IMPORT_CONFIG')
+      coredns_import = ENV.fetch(COREDNS_IMPORT_CONFIG)
+      @log.info("Info: Core DNS import feature enabled.. Syntax will be similar to import config...")
     else
-      COREDNS_CM = "coredns"
-      @log.warn("Info: No COREDNS_CONFIGMAP_NAME Environment Variable found.. Falling back to default configmap 'coredns'")
+      coredns_import = false
+      @log.info("Info: Core DNS import feature disabled.. Falling back to default syntax")
     end
-    return COREDNS_CM
+
+    if ENV.key?('COREDNS_CONFIGMAP_NAME')
+      coredns_cm = ENV.fetch('COREDNS_CONFIGMAP_NAME')
+      @log.info("Info: CoreDNS Custom ConfigMap Enabeld.. #{COREDNS_CONFIGMAP_NAME} will be modified for adding rewrite rules...")
+    else
+      coredns_cm = "coredns"
+      @log.info("Info: No COREDNS_CONFIGMAP_NAME Environment Variable found.. Falling back to default configmap 'coredns'")
+    end
+    return [coredns_import,coredns_cm]
   end
 
   def fetch_ingress_hosts
@@ -54,32 +63,48 @@ class HairpinProxyController
     hosts.sort.uniq
   end
 
-  def coredns_corefile_with_rewrite_rules(original_corefile, hosts)
+  def coredns_corefile_with_rewrite_rules(original_corefile, hosts,configmap_import_enabled)
     # Return a String representing the original CoreDNS Corefile, modified to include rewrite rules for each of *hosts.
     # This is an idempotent transformation because our rewrites are labeled with COMMENT_LINE_SUFFIX.
 
     # Extract base configuration, without our hairpin-proxy rewrites
+
     cflines = original_corefile.strip.split("\n").reject { |line| line.strip.end_with?(COMMENT_LINE_SUFFIX) }
 
     # Create rewrite rules
     rewrite_lines = hosts.map { |host| "    rewrite name #{host} #{DNS_REWRITE_DESTINATION} #{COMMENT_LINE_SUFFIX}" }
+    
+    if configmap_import_enabled = false
 
-    # Inject at the start of the main ".:53 { ... }" configuration block
-    main_server_line = cflines.index { |line| line.strip.start_with?(".:53 {") }
-    raise "Can't find main server line! '.:53 {' in Corefile" if main_server_line.nil?
-    cflines.insert(main_server_line + 1, *rewrite_lines)
+      # Inject at the start of the main ".:53 { ... }" configuration block
+      main_server_line = cflines.index { |line| line.strip.start_with?(".:53 {") }
+      raise "Can't find main server line! '.:53 {' in Corefile" if main_server_line.nil?
+      cflines.insert(main_server_line + 1, *rewrite_lines)
 
-    cflines.join("\n")
+      cflines.join("\n")
+    else
+
+      # Inject at the start of the main ".:53 { ... }" configuration block
+      cflines.insert(0, *rewrite_lines)
+
+      cflines.join("\n")
+    end
   end
 
   def check_and_rewrite_coredns
     @log.info("Polling all Ingress resources and CoreDNS configuration...")
     hosts = fetch_ingress_hosts
-    configmap_name = set_coredns_configmap_var
+    configmap_import_enabled,configmap_name = set_coredns_env_var
     cm = @k8s.api.resource("configmaps", namespace: "kube-system").get(configmap_name)
 
-    old_corefile = cm.data.Corefile
-    new_corefile = coredns_corefile_with_rewrite_rules(old_corefile, hosts)
+    if configmap_import_enabled != true
+      old_corefile = cm.data.Corefile
+    else
+      if cm&.data&.has_key?("hairping-proxy.include")
+        old_corefile = cm.data['hairping-proxy.include']
+      end
+    end
+      new_corefile = coredns_corefile_with_rewrite_rules(old_corefile, hosts,configmap_type)
 
     if old_corefile.strip != new_corefile.strip
       @log.info("Corefile has changed! New contents:\n#{new_corefile}\nSending updated ConfigMap to Kubernetes API server...")

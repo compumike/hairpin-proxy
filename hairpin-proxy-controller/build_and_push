@@ -1,4 +1,4 @@
 #!/bin/sh
 set -e
-docker build -t compumike/hairpin-proxy-controller .
-docker push compumike/hairpin-proxy-controller
+docker build -t saitheja1926/hairpin-proxy-controller$1 .
+docker push saitheja1926/hairpin-proxy-controller$1

@@ -1,4 +1,4 @@
 #!/bin/sh
 set -e
-(cd ./hairpin-proxy-haproxy && ./build_and_push)
-(cd ./hairpin-proxy-controller && ./build_and_push)
+(cd ./hairpin-proxy-haproxy && ./build_and_push $1)
+(cd ./hairpin-proxy-controller && ./build_and_push $1)
