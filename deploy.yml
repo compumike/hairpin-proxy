@@ -23,7 +23,7 @@ spec:
         app: hairpin-proxy-haproxy
     spec:
       containers:
-        - image: compumike/hairpin-proxy-haproxy:0.2.1
+        - image: compumike/hairpin-proxy-haproxy:v0.1
           name: main
           resources:
             requests:
@@ -151,10 +151,12 @@ spec:
         runAsUser: 405
         runAsGroup: 65533
       containers:
-        - image: saitheja1926/hairpin-proxy-controller:0.2.1
+        - image: saitheja1926/hairpin-proxy-controller:v0.1
           env:
           - name: COREDNS_CONFIGMAP_NAME
-            value: "coredns"
+            value: "coredns-custom"
+          - name: COREDNS_IMPORT_CONFIG
+            value: true
           name: main
           resources:
             requests:

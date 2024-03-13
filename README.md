@@ -6,7 +6,8 @@ If you've had problems with ingress-nginx, cert-manager, LetsEncrypt ACME HTTP01
 
 ## One-line install
 
-If your coredns uses a different configmap other than coredns, please modify COREDNS_CONFIGMAP_NAME env in the deployment file.
+If your coredns uses a different configmap other than coredns, please modify COREDNS_CONFIGMAP_NAME env in the hairpin-proxy-controller deployment config.
+If you want to keep customized coredns config in different configmap, please set COREDNS_IMPORT_CONFIG to true in the hairpin-proxy-controller deployment config.
 
 ```shell
 kubectl apply -f https://raw.githubusercontent.com/saithejareddy/hairpin-proxy/master/deploy.yml
@@ -73,7 +74,8 @@ The `dig` should show the external load balancer IP address. The first `curl` sh
 
 ### Step 1: Install hairpin-proxy in your Kubernetes cluster
 
-If your coredns uses a different configmap other than coredns, please modify COREDNS_CONFIGMAP_NAME env in the deployment file.
+If your coredns uses a different configmap other than coredns, please modify COREDNS_CONFIGMAP_NAME env in the hairpin-proxy-controller deployment config.
+If you want to keep customized coredns config in different configmap, please set COREDNS_IMPORT_CONFIG to true in the hairpin-proxy-controller deployment config.
 
 ```shell
 kubectl apply -f https://raw.githubusercontent.com/saithejareddy/hairpin-proxy/master/deploy.yml
