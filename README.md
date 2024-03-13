@@ -6,8 +6,10 @@ If you've had problems with ingress-nginx, cert-manager, LetsEncrypt ACME HTTP01
 
 ## One-line install
 
+If your coredns uses a different configmap other than coredns, please modify COREDNS_CONFIGMAP_NAME env in the deployment file.
+
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/compumike/hairpin-proxy/v0.2.1/deploy.yml
+kubectl apply -f https://raw.githubusercontent.com/saithejareddy/hairpin-proxy/master/deploy.yml
 ```
 
 If you're using [ingress-nginx](https://kubernetes.github.io/ingress-nginx/) and [cert-manager](https://github.com/jetstack/cert-manager), it will work out of the box. See detailed installation and testing instructions below.
@@ -71,8 +73,10 @@ The `dig` should show the external load balancer IP address. The first `curl` sh
 
 ### Step 1: Install hairpin-proxy in your Kubernetes cluster
 
+If your coredns uses a different configmap other than coredns, please modify COREDNS_CONFIGMAP_NAME env in the deployment file.
+
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/compumike/hairpin-proxy/v0.2.1/deploy.yml
+kubectl apply -f https://raw.githubusercontent.com/saithejareddy/hairpin-proxy/master/deploy.yml
 ```
 
 If you're using `ingress-nginx`, this will work as-is.
@@ -129,5 +133,5 @@ To resolve this, we need to rewrite the DNS on the Node itself. The Node does no
 To install this DaemonSet:
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/compumike/hairpin-proxy/v0.2.1/deploy-etchosts-daemonset.yml
+kubectl apply -f https://raw.githubusercontent.com/saithejareddy/hairpin-proxy/master/deploy-etchosts-daemonset.yml
 ```

@@ -10,6 +10,7 @@ class HairpinProxyController
   COMMENT_LINE_SUFFIX = "# Added by hairpin-proxy"
   DNS_REWRITE_DESTINATION = "hairpin-proxy.hairpin-proxy.svc.cluster.local"
   POLL_INTERVAL = ENV.fetch("POLL_INTERVAL", "15").to_i.clamp(1..)
+  
 
   # Kubernetes <= 1.18 puts Ingress in "extensions/v1beta1"
   # Kubernetes >= 1.19 puts Ingress in "networking.k8s.io/v1"
@@ -21,6 +22,20 @@ class HairpinProxyController
 
     STDOUT.sync = true
     @log = Logger.new(STDOUT)
+  end
+
+  def set_coredns_configmap_var
+
+    # This function looks up for coredns configmap name from env.
+    # If not present, it uses default name coredns
+    # Returning CoreDNS CM Variable
+    if ENV.key?('COREDNS_CONFIGMAP_NAME')
+      COREDNS_CM = ENV['COREDNS_CONFIGMAP_NAME']
+    else
+      COREDNS_CM = "coredns"
+      @log.warn("Info: No COREDNS_CONFIGMAP_NAME Environment Variable found.. Falling back to default configmap 'coredns'")
+    end
+    return COREDNS_CM
   end
 
   def fetch_ingress_hosts
@@ -60,7 +75,8 @@ class HairpinProxyController
   def check_and_rewrite_coredns
     @log.info("Polling all Ingress resources and CoreDNS configuration...")
     hosts = fetch_ingress_hosts
-    cm = @k8s.api.resource("configmaps", namespace: "kube-system").get("coredns")
+    configmap_name = set_coredns_configmap_var
+    cm = @k8s.api.resource("configmaps", namespace: "kube-system").get(configmap_name)
 
     old_corefile = cm.data.Corefile
     new_corefile = coredns_corefile_with_rewrite_rules(old_corefile, hosts)

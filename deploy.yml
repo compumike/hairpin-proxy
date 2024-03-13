@@ -152,6 +152,9 @@ spec:
         runAsGroup: 65533
       containers:
         - image: compumike/hairpin-proxy-controller:0.2.1
+          env:
+          - name: COREDNS_CONFIGMAP_NAME
+            value: "coredns"
           name: main
           resources:
             requests:
